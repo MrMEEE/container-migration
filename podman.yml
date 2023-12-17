@@ -1,0 +1,50 @@
+- name: Install Podman
+  hosts: all
+  tasks:
+    - name: Install Podman
+      ansible.builtin.package:
+        name: podman
+        state: latest
+      become: true
+
+    - name: Start the podman service
+      ansible.builtin.service:
+        name: podman
+        state: started
+        enabled: true
+      become: true
+
+    - name: Create nginx service user
+      ansible.builtin.user:
+        name: nginx
+        state: present
+      become: true
+
+    - name: Create data folder
+      ansible.builtin.file:
+        path: /web
+        state: directory
+        mode: '0777'
+        owner: 'nginx'
+      become: true
+ 
+    - name: Create index.html
+      ansible.builtin.copy:
+        content: Welcome to Ansible Podman Lab !
+        dest: /web/index.html
+        mode: '0755'
+        owner: 'nginx'
+        setype: 'httpd_sys_content_t'
+      become: true
+
+    - name: Start nginx podman container
+      containers.podman.podman_container:
+        name: nginx
+        image: docker.io/library/nginx:latest
+        state: started
+        ports:
+          - 8080:80
+        volumes:
+          - /web/:/usr/share/nginx/html
+      become_user: nginx
+      become: true

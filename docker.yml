@@ -1,0 +1,63 @@
+- name: Install Docker
+  hosts: all
+  tasks:
+    - name: Download rpm repo file
+      ansible.builtin.get_url:
+        url: https://download.docker.com/linux/centos/docker-ce.repo
+        dest: /etc/yum.repos.d/docker-ce.repo
+        mode: 420
+      become: true
+
+    - name: Install docker-ce
+      ansible.builtin.package:
+        name: docker-ce
+        state: latest
+      become: true
+
+    - name: Start the docker service
+      ansible.builtin.service:
+        name: docker
+        state: started
+        enabled: true
+      become: true
+
+    - name: Create nginx service user
+      ansible.builtin.user:
+        name: nginx
+        state: present
+      become: true
+
+    - name: Add the nginx user to the docker group
+      ansible.builtin.user:
+        name: nginx
+        groups: docker
+        append: true
+      become: true
+
+    - name: Create data folder
+      ansible.builtin.file:
+        path: /web
+        state: directory
+        mode: '0777'
+        owner: 'nginx'
+      become: true
+
+    - name: Create index.html
+      ansible.builtin.copy:
+        content: Welcome to Ansible Docker Lab !
+        dest: /web/index.html
+        mode: '0755'
+        owner: 'nginx'
+      become: true
+
+    - name: Start nginx docker container
+      community.docker.docker_container:
+        name: nginx
+        image: nginx:latest
+        state: started
+        ports:
+          - 80:80
+        volumes:
+          - /web/:/usr/share/nginx/html
+      become_user: nginx
+      become: true
